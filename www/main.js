@@ -1,6 +1,7 @@
 import { Preferences } from '@capacitor/preferences'
-import { Capacitor } from '@capacitor/core'
+import { Capacitor, registerPlugin } from '@capacitor/core'
 
+const NativeBridge = registerPlugin('ClawBenchBridge')
 const KEY = 'clawbench.serverUrl'
 const input = document.querySelector('#serverUrl')
 const connectBtn = document.querySelector('#connectBtn')
@@ -29,6 +30,48 @@ function normalizeUrl(raw) {
   return url.toString().replace(/\/$/, '')
 }
 
+function installAndroidNativeCompat(serverUrl) {
+  if (!Capacitor.isNativePlatform()) return
+  if (window.AndroidNative) return
+
+  window.AndroidNative = {
+    isNativeApp() { return true },
+    isIOSApp() { return true },
+    isAndroidApp() { return false },
+    getPassword() { return localStorage.getItem('clawbench.sshPassword') || '' },
+    setSSHPassword(password) { localStorage.setItem('clawbench.sshPassword', String(password || '')) },
+    getPendingNavigation() { return '' },
+    isPushAvailable() { return false },
+    getPushRegistrationId() { return '' },
+    startLogCapture() {},
+    stopLogCapture() {},
+    setVolumeKeyMode() {},
+    async showServerDialog() { await NativeBridge.showServerDialog() },
+    async addForwardedPort(localPort, targetPort, host) {
+      await NativeBridge.addForwardedPort({ localPort, targetPort, host: host || '' })
+      window.dispatchEvent(new CustomEvent('clawbench-port-forward-result', { detail: { localPort, success: true } }))
+    },
+    async removeForwardedPort(localPort) { await NativeBridge.removeForwardedPort({ localPort }) },
+    async stopBackgroundService() { await NativeBridge.stopBackgroundService() },
+    reconnectTunnel() { NativeBridge.reconnectTunnel(); return true },
+    testPortReachable(localPort) { return true },
+    async openInBrowser(port, protocol, host) {
+      const url = buildLocalUrl(port, protocol)
+      await NativeBridge.openInBrowser({ url, port, protocol, host: host || '' })
+    },
+    async openInSandbox(port, protocol, host) {
+      const url = buildLocalUrl(port, protocol)
+      await NativeBridge.openInSandbox({ url, port, protocol, host: host || '' })
+    },
+    async downloadFile(path) { await NativeBridge.downloadFile({ path }) }
+  }
+}
+
+function buildLocalUrl(port, protocol) {
+  const scheme = protocol === 'https' ? 'https' : 'http'
+  return `${scheme}://127.0.0.1:${encodeURIComponent(port)}`
+}
+
 async function connect(raw) {
   clearError()
   const url = normalizeUrl(raw)
@@ -37,10 +80,8 @@ async function connect(raw) {
     return
   }
   await Preferences.set({ key: KEY, value: url })
-
-  // 直接在 Capacitor 主 WKWebView 内导航到 ClawBench 服务端。
-  // 这样远程 ClawBench Web UI 会像 Android WebView 一样运行在 App 内，
-  // 后续可通过 Capacitor 插件继续补 SSH 隧道、下载、沙盒浏览等原生能力。
+  localStorage.setItem(KEY, url)
+  installAndroidNativeCompat(url)
   window.location.href = url
 }
 
@@ -50,6 +91,7 @@ input.addEventListener('keydown', (event) => {
 })
 clearBtn.addEventListener('click', async () => {
   await Preferences.remove({ key: KEY })
+  localStorage.removeItem(KEY)
   input.value = ''
   clearError()
 })
@@ -57,6 +99,7 @@ clearBtn.addEventListener('click', async () => {
 const saved = await Preferences.get({ key: KEY })
 if (saved.value) {
   input.value = saved.value
+  installAndroidNativeCompat(saved.value)
   if (Capacitor.isNativePlatform()) {
     setTimeout(() => connect(saved.value), 250)
   }

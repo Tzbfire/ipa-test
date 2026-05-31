@@ -29,6 +29,10 @@ jobs:
       - name: Generate iOS project
         run: npx cap add ios
 
+      - name: Install native iOS bridge sources
+        run: |
+          cp ios-native/*.swift ios/App/App/
+
       - name: Sync Capacitor iOS
         run: npx cap sync ios
 
