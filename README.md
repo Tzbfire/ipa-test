@@ -1,36 +1,50 @@
-# BasicIPA
+# ClawBench iOS Capacitor Client
 
-一个最基础的原生 iOS Swift 示例项目，用 GitHub Actions 在 macOS runner 上编译并打包 unsigned IPA。
+这是 ClawBench 的 iOS Capacitor 客户端壳，连接远程 ClawBench 服务端使用。
 
-## 功能
+## 当前功能
 
-打开后显示：
+- Capacitor iOS App
+- 首次输入 ClawBench 服务端地址
+- 使用 Capacitor Preferences 保存地址
+- 自动跳转到服务端 Web UI
+- 支持 HTTP 内网服务端地址，已在 CI 中 patch ATS
+- GitHub Actions 构建 unsigned IPA
 
-- `Hello IPA`
-- `Built by GitHub Actions`
+## 服务端要求
 
-## 项目结构
+需要先部署 ClawBench 服务端，例如：
 
-```text
-.
-├── project.yml                         # XcodeGen 项目配置
-├── BasicIPA/
-│   ├── AppDelegate.swift
-│   ├── SceneDelegate.swift
-│   ├── ViewController.swift
-│   ├── LaunchScreen.storyboard
-│   └── Assets.xcassets/
-└── .github/workflows/build-ipa.yml      # GitHub Actions 编译 IPA
+```bash
+wget https://github.com/xulongzhe/clawbench/releases/latest/download/clawbench-linux-amd64.zip
+unzip clawbench-linux-amd64.zip
+cd clawbench
+./server.sh
 ```
 
-## 如何使用 GitHub Actions 编译
+然后在 iOS App 输入：
 
-1. 新建一个 GitHub 仓库。
-2. 把本目录所有文件上传到仓库根目录。
-3. 进入 GitHub 仓库页面：`Actions` → `Build unsigned IPA` → `Run workflow`。
-4. 编译完成后，在 workflow run 的 `Artifacts` 下载 `BasicIPA-unsigned.ipa`。
+```text
+http://服务器IP:20000
+```
 
-## 注意
+公网建议使用 HTTPS 域名。
 
-这个工作流生成的是 **unsigned IPA**，通常可用于后续重签名、越狱环境测试、或作为 CI 构建产物。  
-如果要安装到普通 iPhone，需要使用你的 Apple Developer 证书和 provisioning profile 进行签名。
+## 构建 IPA
+
+GitHub Actions:
+
+1. 打开仓库 Actions
+2. 运行 `Build iOS Capacitor unsigned IPA`
+3. 下载 Artifact：`ClawBench-iOS-unsigned`
+
+## 后续增强方向
+
+- `useNativeBridge` 抽象层接入 ClawBench 前端
+- iOS 文件下载：Filesystem + Share
+- iOS 外部 Safari 打开
+- iOS 沙盒 WKWebView
+- iOS SSH 隧道插件
+- APNs / 本地通知
+
+注意：当前产物是 unsigned IPA，普通 iPhone 安装需要 Apple Developer 证书和 provisioning profile 重签名。

@@ -1,4 +1,4 @@
-name: Build unsigned IPA
+name: Build iOS Capacitor unsigned IPA
 
 on:
   workflow_dispatch:
@@ -14,17 +14,37 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install XcodeGen
-        run: brew install xcodegen
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
 
-      - name: Generate Xcode project
-        run: xcodegen generate
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Prepare web assets
+        run: npm run build
+
+      - name: Generate iOS project
+        run: npx cap add ios
+
+      - name: Sync Capacitor iOS
+        run: npx cap sync ios
+
+      - name: Patch iOS Info.plist for HTTP servers
+        run: |
+          /usr/libexec/PlistBuddy -c "Delete :NSAppTransportSecurity" ios/App/App/Info.plist 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity dict" ios/App/App/Info.plist
+          /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity:NSAllowsArbitraryLoads bool true" ios/App/App/Info.plist
+          /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity:NSAllowsArbitraryLoadsInWebContent bool true" ios/App/App/Info.plist
+          /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity:NSAllowsLocalNetworking bool true" ios/App/App/Info.plist
 
       - name: Build app without code signing
         run: |
           xcodebuild \
-            -project BasicIPA.xcodeproj \
-            -scheme BasicIPA \
+            -workspace ios/App/App.xcworkspace \
+            -scheme App \
             -configuration Release \
             -sdk iphoneos \
             -derivedDataPath build \
@@ -35,13 +55,13 @@ jobs:
 
       - name: Package unsigned IPA
         run: |
-          APP_PATH="build/Build/Products/Release-iphoneos/BasicIPA.app"
+          APP_PATH="build/Build/Products/Release-iphoneos/App.app"
           mkdir -p Payload
-          cp -R "$APP_PATH" Payload/
-          zip -qry BasicIPA-unsigned.ipa Payload
+          cp -R "$APP_PATH" "Payload/ClawBench.app"
+          zip -qry ClawBench-iOS-unsigned.ipa Payload
 
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
         with:
-          name: BasicIPA-unsigned
-          path: BasicIPA-unsigned.ipa
+          name: ClawBench-iOS-unsigned
+          path: ClawBench-iOS-unsigned.ipa

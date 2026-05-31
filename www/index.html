@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#0d1117" />
+  <title>ClawBench</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <main class="app">
+    <section id="setup" class="card">
+      <div class="brand">
+        <div class="logo">CB</div>
+        <div>
+          <h1>ClawBench</h1>
+          <p>iOS Capacitor Client</p>
+        </div>
+      </div>
+
+      <label class="field">
+        <span>服务端地址</span>
+        <input id="serverUrl" autocomplete="url" autocapitalize="off" spellcheck="false" placeholder="http://192.168.1.10:20000" />
+      </label>
+
+      <button id="connectBtn" class="primary">连接服务端</button>
+      <button id="demoBtn" class="ghost">清空已保存地址</button>
+
+      <p class="hint">这是 ClawBench 的 iOS 客户端壳。核心功能运行在你的 ClawBench 服务端，本 App 负责保存地址并跳转连接。</p>
+      <p id="error" class="error" hidden></p>
+    </section>
+  </main>
+
+  <script type="module" src="./main.js"></script>
+</body>
+</html>
